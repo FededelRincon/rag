@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check-config": "node scripts/check-config.js",
+    "test-manual": "node scripts/test-system.js",
+    "setup": "npm install && npm run check-config"
   },
   "dependencies": {
     "@pinecone-database/pinecone": "^6.1.2",
@@ -25,6 +28,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.5",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",

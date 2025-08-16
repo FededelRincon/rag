@@ -56,7 +56,7 @@ export async function storeEmbeddings(
     filename: string
 ): Promise<StoreEmbeddingsResult> {
     try {
-        const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const documentId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         const vectors = [];
 
         for (let i = 0; i < chunks.length; i++) {

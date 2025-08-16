@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import ErrorAlert from "../../components/ErrorAlert";
 
 interface Message {
   role: "user" | "assistant";
@@ -32,6 +33,10 @@ export default function ChatPage() {
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasDocument, setHasDocument] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(
+    null
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -44,12 +49,40 @@ export default function ChatPage() {
 
   useEffect(() => {
     checkDocumentStatus();
-  }, []);
+
+    // Poll for document status changes every 5 seconds
+    const interval = setInterval(checkDocumentStatus, 5000);
+
+    return () => clearInterval(interval);
+  }, [currentDocumentId]);
 
   const checkDocumentStatus = async () => {
     try {
       const response = await fetch("/api/status");
       const result: StatusResponse = await response.json();
+
+      // Check if document changed (new document uploaded)
+      if (result.hasDocument && result.documentInfo) {
+        const newDocumentId = `${result.documentInfo.filename}_${result.documentInfo.uploadedAt}`;
+
+        if (currentDocumentId && currentDocumentId !== newDocumentId) {
+          // New document detected, clear chat history
+          setMessages([]);
+          setInput("");
+          setConnectionError(null);
+        }
+
+        setCurrentDocumentId(newDocumentId);
+      } else {
+        // No document, clear everything
+        if (currentDocumentId) {
+          setMessages([]);
+          setInput("");
+          setConnectionError(null);
+          setCurrentDocumentId(null);
+        }
+      }
+
       setHasDocument(result.hasDocument);
     } catch (error) {
       console.error("Error checking document status:", error);
@@ -62,8 +95,10 @@ export default function ChatPage() {
 
     const userMessage: Message = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input.trim();
     setInput("");
     setIsLoading(true);
+    setConnectionError(null);
 
     try {
       const response = await fetch("/api/chat", {
@@ -71,8 +106,12 @@ export default function ChatPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: input.trim() }),
+        body: JSON.stringify({ message: currentInput }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const result: ChatResponse = await response.json();
 
@@ -92,14 +131,39 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, assistantMessage]);
       }
     } catch (error) {
+      let errorMsg = "Error de conexión. Por favor intenta de nuevo.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("Failed to fetch")) {
+          errorMsg =
+            "Sin conexión a internet. Verifica tu conexión e intenta de nuevo.";
+        } else if (error.message.includes("HTTP error")) {
+          errorMsg =
+            "Error del servidor. Por favor intenta de nuevo más tarde.";
+        }
+      }
+
+      setConnectionError(errorMsg);
       const errorMessage: Message = {
         role: "assistant",
-        content: "Error de conexión. Por favor intenta de nuevo.",
+        content: errorMsg,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRetryLastMessage = () => {
+    if (messages.length >= 2) {
+      const lastUserMessage = messages[messages.length - 2];
+      if (lastUserMessage.role === "user") {
+        setInput(lastUserMessage.content);
+        // Remove the last error message
+        setMessages((prev) => prev.slice(0, -1));
+      }
+    }
+    setConnectionError(null);
   };
 
   if (!hasDocument) {
@@ -176,6 +240,19 @@ export default function ChatPage() {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {connectionError && (
+        <div className="mb-4">
+          <ErrorAlert
+            title="Error de conexión"
+            message={connectionError}
+            type="error"
+            onRetry={handleRetryLastMessage}
+            onDismiss={() => setConnectionError(null)}
+            retryText="Reintentar última pregunta"
+          />
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex space-x-4">
         <input

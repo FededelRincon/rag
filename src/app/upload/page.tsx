@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDropzone } from "react-dropzone";
+import ErrorAlert from "../../components/ErrorAlert";
 
 interface ProcessingInfo {
   chunks: number;
@@ -57,6 +58,10 @@ export default function UploadPage() {
         body: formData,
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json();
 
       if (result.success) {
@@ -72,8 +77,26 @@ export default function UploadPage() {
       }
     } catch (err) {
       setUploadStatus("error");
-      setError("Error de conexión. Por favor intenta de nuevo.");
+      if (err instanceof Error) {
+        if (err.message.includes("Failed to fetch")) {
+          setError(
+            "Error de conexión. Verifica tu conexión a internet e intenta de nuevo."
+          );
+        } else if (err.message.includes("HTTP error")) {
+          setError("Error del servidor. Por favor intenta de nuevo más tarde.");
+        } else {
+          setError(`Error: ${err.message}`);
+        }
+      } else {
+        setError("Error inesperado. Por favor intenta de nuevo.");
+      }
     }
+  };
+
+  const handleRetry = () => {
+    setUploadStatus("idle");
+    setError(null);
+    setProcessingInfo(null);
   };
 
   return (
@@ -146,8 +169,15 @@ export default function UploadPage() {
       )}
 
       {error && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
+        <div className="mt-6">
+          <ErrorAlert
+            title="Error al procesar el archivo"
+            message={error}
+            type="error"
+            onRetry={handleRetry}
+            onDismiss={() => setError(null)}
+            retryText="Intentar de nuevo"
+          />
         </div>
       )}
     </div>
