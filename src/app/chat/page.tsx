@@ -50,11 +50,21 @@ export default function ChatPage() {
   useEffect(() => {
     checkDocumentStatus();
 
-    // Poll for document status changes every 5 seconds
-    const interval = setInterval(checkDocumentStatus, 5000);
+    // Listen for document upload events to refresh status
+    const handleDocumentUploaded = () => {
+      checkDocumentStatus();
+      // Clear chat history when new document is uploaded
+      setMessages([]);
+      setInput("");
+      setConnectionError(null);
+    };
 
-    return () => clearInterval(interval);
-  }, [currentDocumentId]);
+    window.addEventListener("document-uploaded", handleDocumentUploaded);
+
+    return () => {
+      window.removeEventListener("document-uploaded", handleDocumentUploaded);
+    };
+  }, []);
 
   const checkDocumentStatus = async () => {
     try {

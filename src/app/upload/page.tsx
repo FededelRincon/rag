@@ -67,6 +67,10 @@ export default function UploadPage() {
       if (result.success) {
         setUploadStatus("success");
         setProcessingInfo(result.documentInfo);
+
+        // Notify other components that a document was uploaded
+        window.dispatchEvent(new CustomEvent("document-uploaded"));
+
         // Auto-navigate to chat after 2 seconds
         setTimeout(() => {
           router.push("/chat");

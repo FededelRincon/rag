@@ -1,5 +1,5 @@
 import pdfParse from 'pdf-parse';
-import { encoding_for_model } from 'js-tiktoken';
+import { encodingForModel } from 'js-tiktoken';
 import { CONFIG } from './constants';
 
 /**
@@ -22,7 +22,7 @@ export function chunkTextByTokens(
     chunkSize: number = CONFIG.CHUNK_SIZE,
     overlap: number = CONFIG.CHUNK_OVERLAP
 ): string[] {
-    const encoder = encoding_for_model(CONFIG.EMBEDDING_MODEL);
+    const encoder = encodingForModel(CONFIG.EMBEDDING_MODEL);
 
     try {
         const tokens = encoder.encode(text);
@@ -34,7 +34,8 @@ export function chunkTextByTokens(
             chunks.push(chunkText);
         }
 
-        encoder.free();
+        // Remove encoder.free() as it's not available in all versions
+        // The encoder will be garbage collected automatically
         return chunks;
     } catch (error) {
         throw new Error(`Error chunking text: ${(error as Error).message}`);

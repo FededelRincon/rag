@@ -124,8 +124,12 @@ export async function searchSimilarChunks(
 export async function clearAllEmbeddings(): Promise<void> {
     try {
         await pineconeIndex.namespace(NAMESPACE).deleteAll();
+        console.log('Successfully cleared all embeddings');
     } catch (error) {
-        throw new Error(`Error clearing embeddings: ${(error as Error).message}`);
+        // For the first upload or empty namespace, this is expected
+        // Don't fail the upload process, just log and continue
+        console.log('Could not clear embeddings (this is normal for first upload):', (error as Error).message);
+        // Don't throw error - let the upload continue
     }
 }
 

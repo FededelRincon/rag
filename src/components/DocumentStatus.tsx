@@ -20,10 +20,13 @@ export default function DocumentStatus() {
   useEffect(() => {
     checkStatus();
 
-    // Poll for status updates every 3 seconds
-    const interval = setInterval(checkStatus, 3000);
+    // Listen for custom events to refresh status when needed
+    const handleRefreshStatus = () => checkStatus();
+    window.addEventListener("document-uploaded", handleRefreshStatus);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener("document-uploaded", handleRefreshStatus);
+    };
   }, []);
 
   const checkStatus = async () => {
