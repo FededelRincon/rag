@@ -16,8 +16,10 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="p-6 border border-gray-200 rounded-lg">
             <div className="text-3xl mb-3">📄</div>
-            <h3 className="text-lg font-semibold mb-2">1. Subir PDF</h3>
-            <p className="text-gray-600 text-sm">
+            <h3 className="text-sky-700 text-lg font-semibold mb-2">
+              1. Subir PDF
+            </h3>
+            <p className="text-sky-700 text-sm">
               Carga tu documento PDF (máximo 10MB) para procesarlo y generar
               embeddings vectoriales
             </p>
@@ -25,8 +27,10 @@ export default function Home() {
 
           <div className="p-6 border border-gray-200 rounded-lg">
             <div className="text-3xl mb-3">💬</div>
-            <h3 className="text-lg font-semibold mb-2">2. Hacer Preguntas</h3>
-            <p className="text-gray-600 text-sm">
+            <h3 className="text-sky-700 text-lg font-semibold mb-2">
+              2. Hacer Preguntas
+            </h3>
+            <p className="text-sky-700 text-sm">
               Chatea con tu documento y obtén respuestas basadas en su contenido
             </p>
           </div>

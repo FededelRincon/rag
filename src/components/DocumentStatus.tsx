@@ -60,14 +60,28 @@ export default function DocumentStatus() {
     );
   }
 
+  const filename = status.documentInfo?.filename;
+  const displayName = filename
+    ? filename.length > 25
+      ? `${filename.substring(0, 22)}...`
+      : filename
+    : "Documento cargado";
+
   return (
-    <div className="flex items-center space-x-2 text-sm text-green-600">
-      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-      <span
-        title={`${status.documentInfo?.filename} - ${status.documentInfo?.chunks} chunks`}
-      >
-        Documento cargado
-      </span>
+    <div className="flex items-center space-x-2 text-sm">
+      <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-full px-3 py-1">
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span
+          title={
+            filename
+              ? `${filename} - ${status.documentInfo?.chunks} chunks`
+              : "Documento cargado"
+          }
+          className="font-medium text-green-700"
+        >
+          {displayName}
+        </span>
+      </div>
     </div>
   );
 }
