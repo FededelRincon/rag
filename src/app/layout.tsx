@@ -37,7 +37,7 @@ export default function RootLayout({
                 RAG Básico
               </Link>
               <div className="flex items-center space-x-6">
-                {/* <DocumentStatus /> */}
+                <DocumentStatus />
                 <div className="flex space-x-6">
                   <Link
                     href="/upload"
