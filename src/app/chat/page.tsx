@@ -38,6 +38,7 @@ export default function ChatPage() {
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(
     null
   );
+  const [isCheckingDocument, setIsCheckingDocument] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,12 +53,17 @@ export default function ChatPage() {
     checkDocumentStatus();
 
     // Listen for document upload events to refresh status
-    const handleDocumentUploaded = () => {
-      checkDocumentStatus();
+    const handleDocumentUploaded = (event: any) => {
+      console.log("Document uploaded event received:", event.detail);
       // Clear chat history when new document is uploaded
       setMessages([]);
       setInput("");
       setConnectionError(null);
+
+      // Wait a moment then check status with retries
+      setTimeout(() => {
+        checkDocumentStatus(0);
+      }, 500);
     };
 
     window.addEventListener("document-uploaded", handleDocumentUploaded);
@@ -67,9 +73,19 @@ export default function ChatPage() {
     };
   }, []);
 
-  const checkDocumentStatus = async () => {
+  const checkDocumentStatus = async (retryCount = 0) => {
+    if (retryCount === 0) {
+      setIsCheckingDocument(true);
+    }
+
     try {
-      const response = await fetch("/api/status");
+      const response = await fetch("/api/status", {
+        // Add cache busting to ensure fresh data
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      });
       const result: StatusResponse = await response.json();
 
       // Check if document changed (new document uploaded)
@@ -85,8 +101,18 @@ export default function ChatPage() {
 
         setCurrentDocumentId(newDocumentId);
         setDocumentInfo(result.documentInfo);
+        setHasDocument(true);
+        setIsCheckingDocument(false);
       } else {
-        // No document, clear everything
+        // If we expected a document but don't find one, retry a few times
+        // This handles the case where Pinecone indexing is still in progress
+        if (retryCount < 3) {
+          console.log(`Document not found, retrying... (${retryCount + 1}/3)`);
+          setTimeout(() => checkDocumentStatus(retryCount + 1), 2000);
+          return;
+        }
+
+        // No document after retries, clear everything
         if (currentDocumentId) {
           setMessages([]);
           setInput("");
@@ -94,11 +120,21 @@ export default function ChatPage() {
           setCurrentDocumentId(null);
           setDocumentInfo(null);
         }
+        setHasDocument(false);
       }
 
-      setHasDocument(result.hasDocument);
+      // Only set loading to false on the final attempt
+      if (retryCount >= 3) {
+        setIsCheckingDocument(false);
+      }
     } catch (error) {
       console.error("Error checking document status:", error);
+      // On error, retry a few times before giving up
+      if (retryCount < 3) {
+        setTimeout(() => checkDocumentStatus(retryCount + 1), 2000);
+      } else {
+        setIsCheckingDocument(false);
+      }
     }
   };
 
@@ -178,6 +214,26 @@ export default function ChatPage() {
     }
     setConnectionError(null);
   };
+
+  if (isCheckingDocument) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center border border-slate-200">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-3">
+              Verificando documento...
+            </h2>
+            <p className="text-slate-600 mb-8 leading-relaxed">
+              Estamos confirmando que tu documento esté listo para usar.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasDocument) {
     return (

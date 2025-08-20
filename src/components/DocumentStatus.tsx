@@ -21,7 +21,10 @@ export default function DocumentStatus() {
     checkStatus();
 
     // Listen for custom events to refresh status when needed
-    const handleRefreshStatus = () => checkStatus();
+    const handleRefreshStatus = () => {
+      setLoading(true);
+      setTimeout(() => checkStatus(0), 1000); // Wait a bit before checking
+    };
     window.addEventListener("document-uploaded", handleRefreshStatus);
 
     return () => {
@@ -29,16 +32,30 @@ export default function DocumentStatus() {
     };
   }, []);
 
-  const checkStatus = async () => {
+  const checkStatus = async (retryCount = 0) => {
     try {
-      const response = await fetch("/api/status");
+      const response = await fetch("/api/status", {
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      });
       const result: StatusResponse = await response.json();
       setStatus(result);
     } catch (error) {
       console.error("Error checking document status:", error);
+
+      // Retry a few times before giving up
+      if (retryCount < 2) {
+        setTimeout(() => checkStatus(retryCount + 1), 1000);
+        return;
+      }
+
       setStatus({ hasDocument: false });
     } finally {
-      setLoading(false);
+      if (retryCount === 0) {
+        setLoading(false);
+      }
     }
   };
 

@@ -72,20 +72,46 @@ export default function UploadPage() {
         setUploadStatus("success");
         setProcessingInfo(result.documentInfo);
 
-        // Notify other components that a document was uploaded
-        window.dispatchEvent(new CustomEvent("document-uploaded"));
+        // Wait a bit for Pinecone to fully index before notifying
+        setTimeout(() => {
+          // Notify other components that a document was uploaded
+          window.dispatchEvent(
+            new CustomEvent("document-uploaded", {
+              detail: {
+                documentInfo: result.documentInfo,
+                timestamp: new Date().toISOString(),
+              },
+            })
+          );
+        }, 1000);
 
         // Start countdown for auto-navigation
         let timeLeft = 10; // Aumentamos a 10 segundos
         setCountdown(timeLeft);
 
-        const countdownInterval = setInterval(() => {
+        const countdownInterval = setInterval(async () => {
           timeLeft -= 1;
           setCountdown(timeLeft);
 
           if (timeLeft <= 0) {
             clearInterval(countdownInterval);
-            router.push("/chat");
+
+            // Verify document is available before auto-redirecting
+            try {
+              const statusResponse = await fetch("/api/status");
+              const statusResult = await statusResponse.json();
+
+              if (statusResult.hasDocument) {
+                router.push("/chat");
+              } else {
+                // Document not ready yet, wait a bit more
+                setTimeout(() => router.push("/chat"), 2000);
+              }
+            } catch (error) {
+              console.error("Error verifying document status:", error);
+              // Proceed anyway, the chat page will handle retries
+              router.push("/chat");
+            }
           }
         }, 1000);
 
@@ -418,11 +444,30 @@ export default function UploadPage() {
                 <div className="space-y-3">
                   {/* Botón principal más prominente */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if ((window as any).countdownInterval) {
                         clearInterval((window as any).countdownInterval);
                       }
-                      router.push("/chat");
+
+                      // Verify document is available before redirecting
+                      try {
+                        const statusResponse = await fetch("/api/status");
+                        const statusResult = await statusResponse.json();
+
+                        if (statusResult.hasDocument) {
+                          router.push("/chat");
+                        } else {
+                          // Document not ready yet, wait a bit more
+                          setTimeout(() => router.push("/chat"), 2000);
+                        }
+                      } catch (error) {
+                        console.error(
+                          "Error verifying document status:",
+                          error
+                        );
+                        // Proceed anyway, the chat page will handle retries
+                        router.push("/chat");
+                      }
                     }}
                     className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white py-4 px-6 rounded-xl hover:from-emerald-700 hover:to-green-700 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-3"
                   >
