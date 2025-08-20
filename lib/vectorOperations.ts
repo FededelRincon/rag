@@ -93,7 +93,7 @@ export async function storeEmbeddings(
  */
 export async function searchSimilarChunks(
     query: string,
-    topK: number = 5
+    topK: number = 10
 ): Promise<SearchResult[]> {
     try {
         const queryEmbedding = await generateEmbedding(query);
@@ -138,28 +138,35 @@ export async function clearAllEmbeddings(): Promise<void> {
  */
 export async function generateChatResponse(query: string, context: string): Promise<string> {
     try {
-        const prompt = `Based on the following context, answer the user's question. If the context doesn't contain enough information to answer the question, respond with "No tengo suficiente información en el documento para responder esa pregunta."
+        const prompt = `Contexto del documento:
+${context}
 
-Context: ${context}
+Pregunta: ${query}
 
-Question: ${query}
+Instrucciones:
+- Responde usando la información disponible en el contexto
+- Si la información está completa, da una respuesta detallada
+- Si la información es parcial, responde con lo que tengas y menciona qué información adicional podría ser útil
+- Solo responde "No tengo suficiente información en el documento para responder esa pregunta" si realmente no hay nada relacionado en el contexto
+- Mantén un tono helpful y profesional
+- Responde en español
 
-Answer:`;
+Respuesta:`;
 
         const response = await openai.chat.completions.create({
             model: CONFIG.CHAT_MODEL,
             messages: [
                 {
                     role: 'system',
-                    content: 'You are a helpful assistant that answers questions based on provided document context. Always respond in Spanish.',
+                    content: 'Eres un asistente útil que responde preguntas basándose en el contexto de documentos. Tu objetivo es ser helpful y extraer el máximo valor de la información disponible.',
                 },
                 {
                     role: 'user',
                     content: prompt,
                 },
             ],
-            max_tokens: CONFIG.MAX_TOKENS_RESPONSE,
-            temperature: 0.3,
+            max_tokens: 512, // Aumentado
+            temperature: 0.1,
         });
 
         return response.choices[0].message.content?.trim() || 'No se pudo generar una respuesta.';
