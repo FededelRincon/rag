@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, FileRejection } from "react-dropzone";
 import ErrorAlert from "../../components/ErrorAlert";
 
 interface ProcessingInfo {
@@ -25,10 +25,7 @@ export default function UploadPage() {
   const [autoRedirectCancelled, setAutoRedirectCancelled] = useState(false);
   const router = useRouter();
 
-  const onDrop = (
-    acceptedFiles: File[],
-    rejectedFiles: { errors: { code: string; message: string }[] }[]
-  ) => {
+  const onDrop = (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
     if (rejectedFiles.length > 0) {
       setError("Por favor selecciona un archivo PDF válido menor a 10MB");
       return;
@@ -77,7 +74,7 @@ export default function UploadPage() {
       if (result.success) {
         setIsUploading(false);
         setUploadStatus("success");
-        setProcessingInfo(result.documentInfo);
+        setProcessingInfo(result.documentInfo || null);
 
         // Wait a bit for Pinecone to fully index before notifying
         setTimeout(() => {

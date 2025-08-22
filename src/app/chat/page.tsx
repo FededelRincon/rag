@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ErrorAlert from "../../components/ErrorAlert";
 
 interface Message {
@@ -49,12 +49,83 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  const checkDocumentStatus = useCallback(
+    async (retryCount = 0) => {
+      if (retryCount === 0) {
+        setIsCheckingDocument(true);
+      }
+
+      try {
+        const response = await fetch("/api/status", {
+          // Add cache busting to ensure fresh data
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        });
+        const result: StatusResponse = await response.json();
+
+        // Check if document changed (new document uploaded)
+        if (result.hasDocument && result.documentInfo) {
+          const newDocumentId = `${result.documentInfo.filename}_${result.documentInfo.uploadedAt}`;
+
+          if (currentDocumentId && currentDocumentId !== newDocumentId) {
+            // New document detected, clear chat history
+            setMessages([]);
+            setInput("");
+            setConnectionError(null);
+          }
+
+          setCurrentDocumentId(newDocumentId);
+          setDocumentInfo(result.documentInfo);
+          setHasDocument(true);
+          setIsCheckingDocument(false);
+        } else {
+          // If we expected a document but don't find one, retry a few times
+          // This handles the case where Pinecone indexing is still in progress
+          if (retryCount < 3) {
+            console.log(
+              `Document not found, retrying... (${retryCount + 1}/3)`
+            );
+            setTimeout(() => checkDocumentStatus(retryCount + 1), 2000);
+            return;
+          }
+
+          // No document after retries, clear everything
+          if (currentDocumentId) {
+            setMessages([]);
+            setInput("");
+            setConnectionError(null);
+            setCurrentDocumentId(null);
+            setDocumentInfo(null);
+          }
+          setHasDocument(false);
+        }
+
+        // Only set loading to false on the final attempt
+        if (retryCount >= 3) {
+          setIsCheckingDocument(false);
+        }
+      } catch (error) {
+        console.error("Error checking document status:", error);
+        // On error, retry a few times before giving up
+        if (retryCount < 3) {
+          setTimeout(() => checkDocumentStatus(retryCount + 1), 2000);
+        } else {
+          setIsCheckingDocument(false);
+        }
+      }
+    },
+    [currentDocumentId]
+  );
+
   useEffect(() => {
     checkDocumentStatus();
 
     // Listen for document upload events to refresh status
-    const handleDocumentUploaded = (event: CustomEvent) => {
-      console.log("Document uploaded event received:", event.detail);
+    const handleDocumentUploaded = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log("Document uploaded event received:", customEvent.detail);
       // Clear chat history when new document is uploaded
       setMessages([]);
       setInput("");
@@ -72,71 +143,6 @@ export default function ChatPage() {
       window.removeEventListener("document-uploaded", handleDocumentUploaded);
     };
   }, [checkDocumentStatus]);
-
-  const checkDocumentStatus = async (retryCount = 0) => {
-    if (retryCount === 0) {
-      setIsCheckingDocument(true);
-    }
-
-    try {
-      const response = await fetch("/api/status", {
-        // Add cache busting to ensure fresh data
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
-      });
-      const result: StatusResponse = await response.json();
-
-      // Check if document changed (new document uploaded)
-      if (result.hasDocument && result.documentInfo) {
-        const newDocumentId = `${result.documentInfo.filename}_${result.documentInfo.uploadedAt}`;
-
-        if (currentDocumentId && currentDocumentId !== newDocumentId) {
-          // New document detected, clear chat history
-          setMessages([]);
-          setInput("");
-          setConnectionError(null);
-        }
-
-        setCurrentDocumentId(newDocumentId);
-        setDocumentInfo(result.documentInfo);
-        setHasDocument(true);
-        setIsCheckingDocument(false);
-      } else {
-        // If we expected a document but don't find one, retry a few times
-        // This handles the case where Pinecone indexing is still in progress
-        if (retryCount < 3) {
-          console.log(`Document not found, retrying... (${retryCount + 1}/3)`);
-          setTimeout(() => checkDocumentStatus(retryCount + 1), 2000);
-          return;
-        }
-
-        // No document after retries, clear everything
-        if (currentDocumentId) {
-          setMessages([]);
-          setInput("");
-          setConnectionError(null);
-          setCurrentDocumentId(null);
-          setDocumentInfo(null);
-        }
-        setHasDocument(false);
-      }
-
-      // Only set loading to false on the final attempt
-      if (retryCount >= 3) {
-        setIsCheckingDocument(false);
-      }
-    } catch (error) {
-      console.error("Error checking document status:", error);
-      // On error, retry a few times before giving up
-      if (retryCount < 3) {
-        setTimeout(() => checkDocumentStatus(retryCount + 1), 2000);
-      } else {
-        setIsCheckingDocument(false);
-      }
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

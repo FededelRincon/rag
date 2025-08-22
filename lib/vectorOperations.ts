@@ -29,7 +29,7 @@ export interface VectorMetadata {
     documentId: string;
     timestamp: string;
     totalChunks: number;
-    [key: string]: any; // Index signature for Pinecone compatibility
+    [key: string]: string | number; // Index signature for Pinecone compatibility
 }
 
 /**

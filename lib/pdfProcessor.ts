@@ -50,7 +50,7 @@ export function validatePDF(file: File): { valid: boolean; error?: string } {
         return { valid: false, error: 'No file provided' };
     }
 
-    if (!CONFIG.SUPPORTED_TYPES.includes(file.type as any)) {
+    if (!CONFIG.SUPPORTED_TYPES.includes(file.type as "application/pdf")) {
         return { valid: false, error: 'File must be a PDF' };
     }
 
