@@ -25,7 +25,10 @@ export default function UploadPage() {
   const [autoRedirectCancelled, setAutoRedirectCancelled] = useState(false);
   const router = useRouter();
 
-  const onDrop = (acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = (
+    acceptedFiles: File[],
+    rejectedFiles: { errors: { code: string; message: string }[] }[]
+  ) => {
     if (rejectedFiles.length > 0) {
       setError("Por favor selecciona un archivo PDF válido menor a 10MB");
       return;
@@ -65,7 +68,11 @@ export default function UploadPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result: {
+        success: boolean;
+        documentInfo?: ProcessingInfo;
+        error?: string;
+      } = await response.json();
 
       if (result.success) {
         setIsUploading(false);
@@ -99,7 +106,8 @@ export default function UploadPage() {
             // Verify document is available before auto-redirecting
             try {
               const statusResponse = await fetch("/api/status");
-              const statusResult = await statusResponse.json();
+              const statusResult: { hasDocument: boolean } =
+                await statusResponse.json();
 
               if (statusResult.hasDocument) {
                 router.push("/chat");
@@ -116,7 +124,9 @@ export default function UploadPage() {
         }, 1000);
 
         // Guardar el interval para poder cancelarlo
-        (window as any).countdownInterval = countdownInterval;
+        (
+          window as unknown as { countdownInterval: NodeJS.Timeout }
+        ).countdownInterval = countdownInterval;
       } else {
         setIsUploading(false);
         setUploadStatus("error");
@@ -151,8 +161,14 @@ export default function UploadPage() {
   };
 
   const cancelAutoRedirect = () => {
-    if ((window as any).countdownInterval) {
-      clearInterval((window as any).countdownInterval);
+    if (
+      (window as unknown as { countdownInterval?: NodeJS.Timeout })
+        .countdownInterval
+    ) {
+      clearInterval(
+        (window as unknown as { countdownInterval: NodeJS.Timeout })
+          .countdownInterval
+      );
     }
     setAutoRedirectCancelled(true);
   };
@@ -445,14 +461,27 @@ export default function UploadPage() {
                   {/* Botón principal más prominente */}
                   <button
                     onClick={async () => {
-                      if ((window as any).countdownInterval) {
-                        clearInterval((window as any).countdownInterval);
+                      if (
+                        (
+                          window as unknown as {
+                            countdownInterval?: NodeJS.Timeout;
+                          }
+                        ).countdownInterval
+                      ) {
+                        clearInterval(
+                          (
+                            window as unknown as {
+                              countdownInterval: NodeJS.Timeout;
+                            }
+                          ).countdownInterval
+                        );
                       }
 
                       // Verify document is available before redirecting
                       try {
                         const statusResponse = await fetch("/api/status");
-                        const statusResult = await statusResponse.json();
+                        const statusResult: { hasDocument: boolean } =
+                          await statusResponse.json();
 
                         if (statusResult.hasDocument) {
                           router.push("/chat");
@@ -493,8 +522,20 @@ export default function UploadPage() {
                   {/* Botón secundario */}
                   <button
                     onClick={() => {
-                      if ((window as any).countdownInterval) {
-                        clearInterval((window as any).countdownInterval);
+                      if (
+                        (
+                          window as unknown as {
+                            countdownInterval?: NodeJS.Timeout;
+                          }
+                        ).countdownInterval
+                      ) {
+                        clearInterval(
+                          (
+                            window as unknown as {
+                              countdownInterval: NodeJS.Timeout;
+                            }
+                          ).countdownInterval
+                        );
                       }
                       setFile(null);
                       setUploadStatus("idle");

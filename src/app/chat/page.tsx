@@ -53,7 +53,7 @@ export default function ChatPage() {
     checkDocumentStatus();
 
     // Listen for document upload events to refresh status
-    const handleDocumentUploaded = (event: any) => {
+    const handleDocumentUploaded = (event: CustomEvent) => {
       console.log("Document uploaded event received:", event.detail);
       // Clear chat history when new document is uploaded
       setMessages([]);
@@ -71,7 +71,7 @@ export default function ChatPage() {
     return () => {
       window.removeEventListener("document-uploaded", handleDocumentUploaded);
     };
-  }, []);
+  }, [checkDocumentStatus]);
 
   const checkDocumentStatus = async (retryCount = 0) => {
     if (retryCount === 0) {
@@ -311,11 +311,11 @@ export default function ChatPage() {
             Chat con{" "}
             {documentInfo?.filename ? (
               <span className="text-blue-600" title={documentInfo.filename}>
-                "
+                &quot;
                 {documentInfo.filename.length > 30
                   ? `${documentInfo.filename.substring(0, 27)}...`
                   : documentInfo.filename}
-                "
+                &quot;
               </span>
             ) : (
               "tu Documento"
